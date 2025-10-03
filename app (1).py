@@ -6,18 +6,6 @@ from sklearn.model_selection import train_test_split
 from sklearn.metrics import r2_score, mean_squared_error
 from sklearn.impute import SimpleImputer # Import SimpleImputer
 
-st.set_page_config(page_title="Oil Price Prediction", page_icon="🛢️", layout="wide")
-
-st.title("🛢 Oil Price Prediction using Linear Regression")
-st.markdown("### Predict crude oil prices based on demand, supply, and other features.")
-
-# -----------------------------
-# Load Dataset (use your dataset)
-# -----------------------------
-data = pd.read_csv("Crude oil.csv")  # <-- replace with your file name if different
-st.subheader("📂 Dataset Preview")
-st.dataframe(data.head())
-
 # -----------------------------
 # Preprocessing
 # -----------------------------
@@ -96,9 +84,13 @@ run_model = st.sidebar.button("Run Prediction")
 
 # --- Main Title ---
 st.markdown("""
-    <h1 style='text-align: center; color: #FF6F00;'>🛢 Crude Oil Price Prediction</h1>
-    <p style='text-align: center; font-size:18px; color: gray;'>Predict oil prices using demand, supply, and market data.</p>
+    <h1 style='text-align: center; color: white;'>🛢 Crude Oil Price Prediction</h1>
+    <p style='text-align: center; font-size:18px; color: white;'>Predict oil prices using demand, supply, and market data.</p>
 """, unsafe_allow_html=True)
+
+data = pd.read_csv("Crude oil.csv")  # <-- replace with your file name if different
+st.subheader("📂 Dataset Preview")
+st.dataframe(data.head())
 
 # --- Load Data ---
 if uploaded_file is not None:
