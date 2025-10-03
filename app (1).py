@@ -70,7 +70,7 @@ if st.sidebar.button("Predict Price"):
 
 
 import streamlit as st
-import matlplotlib as plt
+import matplotlib as plt
 import pandas as pd
 import plotly.express as px
 from sklearn.linear_model import LinearRegression
