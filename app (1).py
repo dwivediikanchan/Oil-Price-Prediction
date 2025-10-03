@@ -3,78 +3,15 @@ import pandas as pd
 import numpy as np
 from sklearn.linear_model import LinearRegression
 from sklearn.model_selection import train_test_split
-from sklearn.metrics import r2_score, mean_squared_error
-from sklearn.impute import SimpleImputer # Import SimpleImputer
+from sklearn.metrics import mean_squared_error, r2_score
+import matplotlib.pyplot as plt
+import time
 
-
-data = pd.read_csv("Crude oil.csv") 
-
-# Convert Date column to datetime
-data['Date'] = pd.to_datetime(data['Date'], errors='coerce')
-if 'Date' in data.columns:
-    data['Date'] = data['Date'].astype(str).str[:10]  # take only first 10 chars
-    data['Date'] = pd.to_datetime(data['Date'], errors='coerce')
-else:
-    st.error("⚠️ No 'Date' column found in the dataset!")
-
-
-# Sort by date (important for time series data)
-data = data.sort_values('Date')
-
-# Drop the Date column for regression (not numeric)
-X = data.drop(columns=['Close/Last', 'Date'])  # assuming "Close/Last" is target column
-y = data['Close/Last']
-
-# Handle missing values using imputation
-imputer = SimpleImputer(strategy='mean') # You can change the strategy (e.g., 'median', 'most_frequent')
-X = imputer.fit_transform(X)
-# Convert back to DataFrame to keep column names for Streamlit input
-X = pd.DataFrame(X, columns=data.drop(columns=['Close/Last', 'Date']).columns)
-
-# Train/test split
-X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, shuffle=False)
-
-# Train model
-model = LinearRegression()
-model.fit(X_train, y_train)
-
-# Predictions
-y_pred = model.predict(X_test)
-
-# Evaluate
-print("R² Score:", r2_score(y_test, y_pred))
-print("MSE:", mean_squared_error(y_test, y_pred))
-
-
-# -----------------------------
-# User Input Prediction
-# -----------------------------
-st.sidebar.header("🔧 Enter Input Features")
-
-input_data = {}
-for col in X.columns:
-    input_data[col] = st.sidebar.number_input(f"{col}", float(X[col].min()), float(X[col].max()), float(X[col].mean()))
-
-if st.sidebar.button("Predict Price"):
-    features = np.array([list(input_data.values())])
-    prediction = model.predict(features)[0]
-    st.success(f"💰 Predicted Oil Price: **${prediction:.2f}**")
-
-
-import streamlit as st
-import matplotlib as plt
-import pandas as pd
-import plotly.express as px
-from sklearn.linear_model import LinearRegression
-from sklearn.model_selection import train_test_split
-from sklearn.metrics import mean_squared_error
-
-# --- Page Configuration ---
+# --- Page Config ---
 st.set_page_config(
-    page_title="🛢 Oil Price Predictor",
+    page_title="🛢 Crude Oil Price Predictor",
     page_icon="⛽",
-    layout="wide",
-    initial_sidebar_state="expanded"
+    layout="wide"
 )
 
 # --- Sidebar ---
@@ -83,53 +20,95 @@ uploaded_file = st.sidebar.file_uploader("Upload CSV", type="csv")
 
 st.sidebar.markdown("---")
 st.sidebar.header("⚙️ Model Settings")
-test_size = st.sidebar.slider("Test Data Size (%)", min_value=10, max_value=50, value=20, step=5)
+test_size = st.sidebar.slider("Test Data Size (%)", 10, 50, 20, 5)
 run_model = st.sidebar.button("Run Prediction")
 
-# --- Main Title ---
+# --- Main Header ---
 st.markdown("""
-    <h1 style='text-align: center; color: white;'>🛢 Crude Oil Price Prediction</h1>
-    <p style='text-align: center; font-size:18px; color: white;'>Predict oil prices using demand, supply, and market data.</p>
+<h1 style='text-align: center; color: white;'>🛢 Crude Oil Price Predictor</h1>
+<p style='text-align: center; font-size:18px; color: white;'>Predict oil prices based on demand, supply, and market features.</p>
 """, unsafe_allow_html=True)
 
-
-st.subheader("📂 Dataset Preview")
-st.dataframe(data.head())
-
-# --- Load Data ---
-if uploaded_file is not None:
+if uploaded_file:
     data = pd.read_csv(uploaded_file)
-    st.success("✅ Dataset Loaded Successfully!")
-    st.dataframe(data.head())
 
-    # --- Feature Selection ---
-    st.markdown("### ⚡ Select Features and Target")
-    all_columns = data.columns.tolist()
-    features = st.multiselect("Features (X)", all_columns, default=all_columns[:-1])
-    target = st.selectbox("Target (Y)", all_columns, index=len(all_columns)-1)
+    # --- Tabs ---
+    tabs = st.tabs(["📄 Data Overview", "⚙️ Model Training", "📊 Predictions"])
 
-    if run_model and features and target:
-        X = data[features]
-        y = data[target]
+    # --- Tab 1: Data Overview ---
+    with tabs[0]:
+        st.subheader("Dataset Preview")
+        st.dataframe(data.head())
 
-        X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=test_size/100, random_state=42)
-        model = LinearRegression()
-        model.fit(X_train, y_train)
-        y_pred = model.predict(X_test)
-        mse = mean_squared_error(y_test, y_pred)
+        st.subheader("Dataset Statistics")
+        col1, col2, col3 = st.columns(3)
+        col1.metric("Rows", data.shape[0], "📈")
+        col2.metric("Columns", data.shape[1], "🗂️")
+        col3.metric("Missing Values", data.isnull().sum().sum(), "⚠️")
 
-        st.markdown("### 📊 Predictions vs Actual")
-        fig = px.scatter(x=y_test, y=y_pred, labels={'x':'Actual', 'y':'Predicted'}, title="Actual vs Predicted Oil Prices")
-        st.plotly_chart(fig, use_container_width=True)
+        st.markdown("### Column Types")
+        st.write(data.dtypes)
 
-        st.markdown(f"### 🔹 Mean Squared Error: {mse:.2f}")
+    # --- Data Cleaning ---
+    if 'Date' in data.columns:
+        data['Date'] = data['Date'].astype(str).str[:10]
+        data['Date'] = pd.to_datetime(data['Date'], errors='coerce')
+        data['Date'] = data['Date'].map(pd.Timestamp.toordinal)
 
-        # Optionally show predictions
-        result_df = pd.DataFrame({"Actual": y_test, "Predicted": y_pred})
-        st.dataframe(result_df.head())
+    # Encode categorical columns automatically
+    for col in data.select_dtypes(include='object').columns:
+        data[col] = pd.factorize(data[col])[0]
 
+    # Fill missing values
+    data.fillna(data.mean(), inplace=True)
+
+    # --- Tab 2: Model Training ---
+    with tabs[1]:
+        st.subheader("⚡ Select Features and Target")
+        all_columns = data.columns.tolist()
+        target = st.selectbox("Select Target (Y)", all_columns, index=len(all_columns)-1)
+        features = st.multiselect("Select Features (X)", [c for c in all_columns if c != target], default=[c for c in all_columns if c != target])
+
+        if run_model and features and target:
+            X = data[features]
+            y = data[target]
+
+            # Split data
+            X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=test_size/100, random_state=42)
+
+            # Progress bar while training
+            st.info("Training model...")
+            progress_text = st.empty()
+            progress_bar = st.progress(0)
+            for i in range(1, 101):
+                time.sleep(0.01)
+                progress_text.text(f"Training progress: {i}%")
+                progress_bar.progress(i)
+
+            # Fit model
+            model = LinearRegression()
+            model.fit(X_train, y_train)
+            y_pred = model.predict(X_test)
+
+            st.success("✅ Model Trained Successfully!")
+            st.markdown(f"### 🔹 Mean Squared Error: {mean_squared_error(y_test, y_pred):.2f}")
+            st.markdown(f"### 🔹 R² Score: {r2_score(y_test, y_pred):.2f}")
+
+    # --- Tab 3: Predictions ---
+    with tabs[2]:
+        if run_model and features and target:
+            st.subheader("📊 Actual vs Predicted Prices")
+            fig, ax = plt.subplots(figsize=(8,5))
+            ax.scatter(y_test, y_pred, color='white', label='Predicted vs Actual')
+            ax.plot([y_test.min(), y_test.max()], [y_test.min(), y_test.max()], 'r--', label='Perfect Fit')
+            ax.set_xlabel("Actual Prices")
+            ax.set_ylabel("Predicted Prices")
+            ax.set_title("Actual vs Predicted Crude Oil Prices")
+            ax.legend()
+            st.pyplot(fig)
+
+            st.subheader("Predictions Table")
+            result_df = pd.DataFrame({"Actual": y_test, "Predicted": y_pred})
+            st.dataframe(result_df.head(10))
 else:
     st.warning("⚠️ Please upload a CSV file to get started.")
-
-
-
