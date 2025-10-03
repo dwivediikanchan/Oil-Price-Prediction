@@ -6,10 +6,8 @@ from sklearn.model_selection import train_test_split
 from sklearn.metrics import r2_score, mean_squared_error
 from sklearn.impute import SimpleImputer # Import SimpleImputer
 
-# -----------------------------
-# Preprocessing
-# -----------------------------
-# Select features & target
+
+data = pd.read_csv("Crude oil.csv") 
 
 # Convert Date column to datetime
 data['Date'] = pd.to_datetime(data['Date'], errors='coerce')
@@ -94,7 +92,7 @@ st.markdown("""
     <p style='text-align: center; font-size:18px; color: white;'>Predict oil prices using demand, supply, and market data.</p>
 """, unsafe_allow_html=True)
 
-data = pd.read_csv("Crude oil.csv")  # <-- replace with your file name if different
+
 st.subheader("📂 Dataset Preview")
 st.dataframe(data.head())
 
