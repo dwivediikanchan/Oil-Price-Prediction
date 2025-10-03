@@ -11,11 +11,11 @@ from sklearn.linear_model import LinearRegression
 
 
 data = pd.read_csv("Crude oil.csv")   # <-- Replace with your dataset file
-X = data[['Open', 'High', 'Low', 'Volume']]   # your input features
+x = data[['Open', 'High', 'Low', 'Volume']]   # your input features
 y = data['Close/Last']
 
 model = LinearRegression()
-model.fit(X, y)
+model.fit(x, y)
 
 # ---------------------------
 # Streamlit UI
@@ -50,7 +50,7 @@ if st.sidebar.button("Predict Price"):
 
     # Visualization
     fig, ax = plt.subplots()
-    ax.scatter(y, model.predict(X), alpha=0.5)
+    ax.scatter(y, model.predict(x), alpha=0.5)
     ax.set_xlabel("Actual Price")
     ax.set_ylabel("Predicted Price")
     ax.set_title("Model Performance")
@@ -66,6 +66,7 @@ if uploaded is not None:
     df["Predicted Price"] = preds
     st.dataframe(df)
     st.download_button("⬇️ Download Predictions", df.to_csv(index=False), "predictions.csv")
+
 
 
 
