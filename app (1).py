@@ -106,29 +106,37 @@ if uploaded_file:
             result_df = pd.DataFrame({"Actual": y_test, "Predicted": y_pred})
             st.dataframe(result_df.head(10))
 
-    # --- Tab 4: Custom Predictions ---
-    with tabs[3]:
-        if run_model and features and target:
-            st.subheader("📝 Predict Using Custom Feature Values")
-            n_inputs = st.number_input("How many predictions to make?", min_value=1, max_value=10, value=1, step=1)
+   # --- Tab 4: Custom Predictions ---
+with tabs[3]:
+    if run_model and features and target:
+        st.subheader("📝 Predict Using Custom Feature Values")
+        n_inputs = st.number_input("How many predictions to make?", min_value=1, max_value=10, value=1, step=1)
 
-            custom_inputs = []
-            for i in range(n_inputs):
-                st.markdown(f"### Input {i+1}")
-                input_dict = {}
-                for feature in features:
-                    min_val = float(data[feature].min())
-                    max_val = float(data[feature].max())
-                    mean_val = float(data[feature].mean())
-                    input_dict[feature] = st.number_input(f"{feature} (Input {i+1})", value=mean_val, min_value=min_val, max_value=max_val)
-                custom_inputs.append(input_dict)
+        custom_inputs = []
+        for i in range(n_inputs):
+            st.markdown(f"### Input {i+1}")
+            input_dict = {}
+            for feature in features:
+                min_val = float(data[feature].min())
+                max_val = float(data[feature].max())
+                mean_val = float(data[feature].mean())
+                # Add a unique key for each input
+                input_dict[feature] = st.number_input(
+                    f"{feature} (Input {i+1})", 
+                    value=mean_val, 
+                    min_value=min_val, 
+                    max_value=max_val,
+                    key=f"{feature}_{i}"
+                )
+            custom_inputs.append(input_dict)
 
-            if st.button("Predict Custom Prices"):
-                input_df = pd.DataFrame(custom_inputs)
-                predicted_prices = model.predict(input_df)
-                st.success("🛢 Predicted Prices:")
-                for i, price in enumerate(predicted_prices):
-                    st.write(f"Prediction {i+1}: **{price:.2f}**")
+        if st.button("Predict Custom Prices"):
+            input_df = pd.DataFrame(custom_inputs)
+            predicted_prices = model.predict(input_df)
+            st.success("🛢 Predicted Prices:")
+            for i, price in enumerate(predicted_prices):
+                st.write(f"Prediction {i+1}: **{price:.2f}**")
+
 
     # --- Tab 5: Feature Importance ---
     with tabs[4]:
