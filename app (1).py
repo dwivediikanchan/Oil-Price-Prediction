@@ -69,3 +69,70 @@ if st.sidebar.button("Predict Price"):
     st.success(f"💰 Predicted Oil Price: **${prediction:.2f}**")
 
 
+import streamlit as st
+import pandas as pd
+import plotly.express as px
+from sklearn.linear_model import LinearRegression
+from sklearn.model_selection import train_test_split
+from sklearn.metrics import mean_squared_error
+
+# --- Page Configuration ---
+st.set_page_config(
+    page_title="🛢 Oil Price Predictor",
+    page_icon="⛽",
+    layout="wide",
+    initial_sidebar_state="expanded"
+)
+
+# --- Sidebar ---
+st.sidebar.header("📂 Upload Your Dataset")
+uploaded_file = st.sidebar.file_uploader("Upload CSV", type="csv")
+
+st.sidebar.markdown("---")
+st.sidebar.header("⚙️ Model Settings")
+test_size = st.sidebar.slider("Test Data Size (%)", min_value=10, max_value=50, value=20, step=5)
+run_model = st.sidebar.button("Run Prediction")
+
+# --- Main Title ---
+st.markdown("""
+    <h1 style='text-align: center; color: #FF6F00;'>🛢 Crude Oil Price Prediction</h1>
+    <p style='text-align: center; font-size:18px; color: gray;'>Predict oil prices using demand, supply, and market data.</p>
+""", unsafe_allow_html=True)
+
+# --- Load Data ---
+if uploaded_file is not None:
+    data = pd.read_csv(uploaded_file)
+    st.success("✅ Dataset Loaded Successfully!")
+    st.dataframe(data.head())
+
+    # --- Feature Selection ---
+    st.markdown("### ⚡ Select Features and Target")
+    all_columns = data.columns.tolist()
+    features = st.multiselect("Features (X)", all_columns, default=all_columns[:-1])
+    target = st.selectbox("Target (Y)", all_columns, index=len(all_columns)-1)
+
+    if run_model and features and target:
+        X = data[features]
+        y = data[target]
+
+        X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=test_size/100, random_state=42)
+        model = LinearRegression()
+        model.fit(X_train, y_train)
+        y_pred = model.predict(X_test)
+        mse = mean_squared_error(y_test, y_pred)
+
+        st.markdown("### 📊 Predictions vs Actual")
+        fig = px.scatter(x=y_test, y=y_pred, labels={'x':'Actual', 'y':'Predicted'}, title="Actual vs Predicted Oil Prices")
+        st.plotly_chart(fig, use_container_width=True)
+
+        st.markdown(f"### 🔹 Mean Squared Error: {mse:.2f}")
+
+        # Optionally show predictions
+        result_df = pd.DataFrame({"Actual": y_test, "Predicted": y_pred})
+        st.dataframe(result_df.head())
+
+else:
+    st.warning("⚠️ Please upload a CSV file to get started.")
+
+
+
