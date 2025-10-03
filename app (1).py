@@ -10,7 +10,7 @@ import time
 
 # --- Page Config ---
 st.set_page_config(
-    page_title=" Oil Predictor",
+    page_title="🛢 Oil Price Predictor",
     page_icon="⛽",
     layout="wide"
 )
@@ -22,20 +22,53 @@ uploaded_file = st.sidebar.file_uploader("Upload CSV", type="csv")
 st.sidebar.markdown("---")
 st.sidebar.header("⚙️ Model Settings")
 test_size = st.sidebar.slider("Test Data Size (%)", 10, 50, 20, 5)
-run_model = st.sidebar.button("Run Prediction")
+
+# Placeholder for custom predictions
+custom_input_values = {}
 
 # --- Main Header ---
 st.markdown("""
 <h1 style='text-align: center; color: white;'>🛢 Oil Price Predictor</h1>
-<p style='text-align: center; font-size:18px; color: gray;'>Predict oil prices with feature importance insights and custom input predictions.</p>
+<p style='text-align: center; font-size:18px; color: gray;'>Predict oil prices with sidebar custom inputs and feature insights.</p>
 """, unsafe_allow_html=True)
 
-# --- Main App Logic ---
 if uploaded_file:
     data = pd.read_csv(uploaded_file)
 
+    # --- Data Cleaning ---
+    if 'Date' in data.columns:
+        data['Date'] = data['Date'].astype(str).str[:10]
+        data['Date'] = pd.to_datetime(data['Date'], errors='coerce')
+        data['Date'] = data['Date'].map(pd.Timestamp.toordinal)
+
+    for col in data.select_dtypes(include='object').columns:
+        data[col] = pd.factorize(data[col])[0]
+
+    data.fillna(data.mean(), inplace=True)
+
+    # --- Select Features and Target ---
+    st.sidebar.subheader("⚡ Select Target and Features")
+    all_columns = data.columns.tolist()
+    target = st.sidebar.selectbox("Select Target (Y)", all_columns, index=len(all_columns)-1)
+    features = st.sidebar.multiselect("Select Features (X)", [c for c in all_columns if c != target], default=[c for c in all_columns if c != target])
+
+    run_model = st.sidebar.button("Run Prediction")
+
+    # --- Sidebar Custom Inputs ---
+    if features:
+        st.sidebar.markdown("---")
+        st.sidebar.subheader("📝 Custom Input for Prediction")
+        for feature in features:
+            min_val = float(data[feature].min())
+            max_val = float(data[feature].max())
+            mean_val = float(data[feature].mean())
+            custom_input_values[feature] = st.sidebar.number_input(
+                f"{feature}", value=mean_val, min_value=min_val, max_value=max_val, key=f"sidebar_{feature}"
+            )
+        predict_button = st.sidebar.button("Predict Custom Price")
+
     # --- Tabs ---
-    tabs = st.tabs(["📄 Data Overview", "⚙️ Model Training", "📊 Predictions", "📝 Custom Predictions", "📊 Feature Importance"])
+    tabs = st.tabs(["📄 Data Overview", "⚙️ Model Training", "📊 Predictions", "📊 Feature Importance"])
 
     # --- Tab 1: Data Overview ---
     with tabs[0]:
@@ -49,24 +82,8 @@ if uploaded_file:
         st.markdown("### Column Types")
         st.write(data.dtypes)
 
-    # --- Data Cleaning ---
-    if 'Date' in data.columns:
-        data['Date'] = data['Date'].astype(str).str[:10]
-        data['Date'] = pd.to_datetime(data['Date'], errors='coerce')
-        data['Date'] = data['Date'].map(pd.Timestamp.toordinal)
-
-    for col in data.select_dtypes(include='object').columns:
-        data[col] = pd.factorize(data[col])[0]
-
-    data.fillna(data.mean(), inplace=True)
-
     # --- Tab 2: Model Training ---
     with tabs[1]:
-        st.subheader("⚡ Select Features and Target")
-        all_columns = data.columns.tolist()
-        target = st.selectbox("Select Target (Y)", all_columns, index=len(all_columns)-1)
-        features = st.multiselect("Select Features (X)", [c for c in all_columns if c != target], default=[c for c in all_columns if c != target])
-
         if run_model and features and target:
             X = data[features]
             y = data[target]
@@ -107,38 +124,8 @@ if uploaded_file:
             result_df = pd.DataFrame({"Actual": y_test, "Predicted": y_pred})
             st.dataframe(result_df.head(10))
 
-    # --- Tab 4: Custom Predictions ---
+    # --- Tab 4: Feature Importance ---
     with tabs[3]:
-        if run_model and features and target:
-            st.subheader("📝 Predict Using Custom Feature Values")
-            n_inputs = st.number_input("How many predictions to make?", min_value=1, max_value=10, value=1, step=1)
-
-            custom_inputs = []
-            for i in range(n_inputs):
-                st.markdown(f"### Input {i+1}")
-                input_dict = {}
-                for feature in features:
-                    min_val = float(data[feature].min())
-                    max_val = float(data[feature].max())
-                    mean_val = float(data[feature].mean())
-                    input_dict[feature] = st.number_input(
-                        f"{feature} (Input {i+1})",
-                        value=mean_val,
-                        min_value=min_val,
-                        max_value=max_val,
-                        key=f"{feature}_{i}"
-                    )
-                custom_inputs.append(input_dict)
-
-            if st.button("Predict Custom Prices"):
-                input_df = pd.DataFrame(custom_inputs)
-                predicted_prices = model.predict(input_df)
-                st.success("🛢 Predicted Prices:")
-                for i, price in enumerate(predicted_prices):
-                    st.write(f"Prediction {i+1}: **{price:.2f}**")
-
-    # --- Tab 5: Feature Importance ---
-    with tabs[4]:
         if run_model and features and target:
             st.subheader("📊 Feature Importance (Coefficient Magnitude)")
             coef_df = pd.DataFrame({
@@ -152,6 +139,13 @@ if uploaded_file:
             sns.barplot(x='Importance', y='Feature', data=coef_df, palette="Oranges_r", ax=ax)
             ax.set_title("Feature Importance")
             st.pyplot(fig)
+
+    # --- Predict Custom Input ---
+    if run_model and features and target and predict_button:
+        st.sidebar.markdown("---")
+        input_df = pd.DataFrame([custom_input_values])
+        predicted_price = model.predict(input_df)[0]
+        st.sidebar.success(f"🛢 Predicted Oil Price: **{predicted_price:.2f}**")
 
 else:
     st.warning("⚠️ Please upload a CSV file to get started.")
