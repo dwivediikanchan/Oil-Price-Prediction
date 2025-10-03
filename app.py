@@ -11,7 +11,7 @@ from sklearn.linear_model import LinearRegression
 
 
 data = pd.read_csv("Crude oil.csv")   # <-- Replace with your dataset file
-X = data[['Open', 'High', 'Low', 'Volume', 'MA7', 'MA30', 'Return1', 'Lag1', 'Lag7']]   # your input features
+X = data[['Open', 'High', 'Low', 'Volume']]   # your input features
 y = data['Close/Last']
 
 model = LinearRegression()
@@ -66,5 +66,6 @@ if uploaded is not None:
     df["Predicted Price"] = preds
     st.dataframe(df)
     st.download_button("⬇️ Download Predictions", df.to_csv(index=False), "predictions.csv")
+
 
 
