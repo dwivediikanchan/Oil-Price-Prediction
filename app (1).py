@@ -5,11 +5,12 @@ from sklearn.linear_model import LinearRegression
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import mean_squared_error, r2_score
 import matplotlib.pyplot as plt
+import seaborn as sns
 import time
 
 # --- Page Config ---
 st.set_page_config(
-    page_title="🛢 Crude Oil Price Predictor",
+    page_title="🛢 Premium Crude Oil Predictor",
     page_icon="⛽",
     layout="wide"
 )
@@ -25,27 +26,25 @@ run_model = st.sidebar.button("Run Prediction")
 
 # --- Main Header ---
 st.markdown("""
-<h1 style='text-align: center; color: white;'>🛢 Crude Oil Price Predictor</h1>
-<p style='text-align: center; font-size:18px; color: white;'>Predict oil prices based on demand, supply, and market features.</p>
+<h1 style='text-align: center; color: white;'>🛢 Premium Crude Oil Price Predictor</h1>
+<p style='text-align: center; font-size:18px; color: white;'>Predict oil prices with feature importance insights and custom input predictions.</p>
 """, unsafe_allow_html=True)
 
 if uploaded_file:
     data = pd.read_csv(uploaded_file)
 
     # --- Tabs ---
-    tabs = st.tabs(["📄 Data Overview", "⚙️ Model Training", "📊 Predictions"])
+    tabs = st.tabs(["📄 Data Overview", "⚙️ Model Training", "📊 Predictions", "📝 Custom Predictions", "📊 Feature Importance"])
 
     # --- Tab 1: Data Overview ---
     with tabs[0]:
         st.subheader("Dataset Preview")
         st.dataframe(data.head())
-
         st.subheader("Dataset Statistics")
         col1, col2, col3 = st.columns(3)
         col1.metric("Rows", data.shape[0], "📈")
         col2.metric("Columns", data.shape[1], "🗂️")
         col3.metric("Missing Values", data.isnull().sum().sum(), "⚠️")
-
         st.markdown("### Column Types")
         st.write(data.dtypes)
 
@@ -55,11 +54,9 @@ if uploaded_file:
         data['Date'] = pd.to_datetime(data['Date'], errors='coerce')
         data['Date'] = data['Date'].map(pd.Timestamp.toordinal)
 
-    # Encode categorical columns automatically
     for col in data.select_dtypes(include='object').columns:
         data[col] = pd.factorize(data[col])[0]
 
-    # Fill missing values
     data.fillna(data.mean(), inplace=True)
 
     # --- Tab 2: Model Training ---
@@ -73,10 +70,9 @@ if uploaded_file:
             X = data[features]
             y = data[target]
 
-            # Split data
             X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=test_size/100, random_state=42)
 
-            # Progress bar while training
+            # Progress bar
             st.info("Training model...")
             progress_text = st.empty()
             progress_bar = st.progress(0)
@@ -85,7 +81,6 @@ if uploaded_file:
                 progress_text.text(f"Training progress: {i}%")
                 progress_bar.progress(i)
 
-            # Fit model
             model = LinearRegression()
             model.fit(X_train, y_train)
             y_pred = model.predict(X_test)
@@ -110,5 +105,45 @@ if uploaded_file:
             st.subheader("Predictions Table")
             result_df = pd.DataFrame({"Actual": y_test, "Predicted": y_pred})
             st.dataframe(result_df.head(10))
+
+    # --- Tab 4: Custom Predictions ---
+    with tabs[3]:
+        if run_model and features and target:
+            st.subheader("📝 Predict Using Custom Feature Values")
+            n_inputs = st.number_input("How many predictions to make?", min_value=1, max_value=10, value=1, step=1)
+
+            custom_inputs = []
+            for i in range(n_inputs):
+                st.markdown(f"### Input {i+1}")
+                input_dict = {}
+                for feature in features:
+                    min_val = float(data[feature].min())
+                    max_val = float(data[feature].max())
+                    mean_val = float(data[feature].mean())
+                    input_dict[feature] = st.number_input(f"{feature} (Input {i+1})", value=mean_val, min_value=min_val, max_value=max_val)
+                custom_inputs.append(input_dict)
+
+            if st.button("Predict Custom Prices"):
+                input_df = pd.DataFrame(custom_inputs)
+                predicted_prices = model.predict(input_df)
+                st.success("🛢 Predicted Prices:")
+                for i, price in enumerate(predicted_prices):
+                    st.write(f"Prediction {i+1}: **{price:.2f}**")
+
+    # --- Tab 5: Feature Importance ---
+    with tabs[4]:
+        if run_model and features and target:
+            st.subheader("📊 Feature Importance (Coefficient Magnitude)")
+            coef_df = pd.DataFrame({
+                "Feature": features,
+                "Coefficient": model.coef_
+            })
+            coef_df['Importance'] = np.abs(coef_df['Coefficient'])
+            coef_df = coef_df.sort_values(by='Importance', ascending=False)
+
+            fig, ax = plt.subplots(figsize=(8,5))
+            sns.barplot(x='Importance', y='Feature', data=coef_df, palette="Oranges_r", ax=ax)
+            ax.set_title("Feature Importance")
+            st.pyplot(fig)
 else:
     st.warning("⚠️ Please upload a CSV file to get started.")
