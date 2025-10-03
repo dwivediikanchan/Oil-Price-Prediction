@@ -13,6 +13,12 @@ from sklearn.impute import SimpleImputer # Import SimpleImputer
 
 # Convert Date column to datetime
 data['Date'] = pd.to_datetime(data['Date'], errors='coerce')
+if 'Date' in data.columns:
+    data['Date'] = data['Date'].astype(str).str[:10]  # take only first 10 chars
+    data['Date'] = pd.to_datetime(data['Date'], errors='coerce')
+else:
+    st.error("⚠️ No 'Date' column found in the dataset!")
+
 
 # Sort by date (important for time series data)
 data = data.sort_values('Date')
