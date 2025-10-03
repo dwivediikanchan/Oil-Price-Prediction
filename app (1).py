@@ -14,7 +14,7 @@ st.markdown("### Predict crude oil prices based on demand, supply, and other fea
 # -----------------------------
 # Load Dataset (use your dataset)
 # -----------------------------
-data = pd.read_csv("/content/Crude oil.csv")  # <-- replace with your file name if different
+data = pd.read_csv("Crude oil.csv")  # <-- replace with your file name if different
 st.subheader("📂 Dataset Preview")
 st.dataframe(data.head())
 
