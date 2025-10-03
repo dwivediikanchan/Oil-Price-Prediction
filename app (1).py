@@ -68,16 +68,4 @@ if st.sidebar.button("Predict Price"):
     prediction = model.predict(features)[0]
     st.success(f"💰 Predicted Oil Price: **${prediction:.2f}**")
 
-# -----------------------------
-# Bulk Prediction via CSV Upload
-# -----------------------------
-uploaded = st.file_uploader("📤 Upload a CSV for Bulk Prediction", type=["csv"])
-if uploaded is not None:
-    new_data = pd.read_csv(uploaded)
-    # Apply the same imputer to the new data
-    new_data_imputed = imputer.transform(new_data)
-    new_data_imputed = pd.DataFrame(new_data_imputed, columns=new_data.columns)
-    preds = model.predict(new_data_imputed)
-    new_data["Predicted Price"] = preds
-    st.dataframe(new_data)
-    st.download_button("⬇ Download Predictions", new_data.to_csv(index=False), "oil_price_predictions.csv")
+
